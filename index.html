@@ -1,0 +1,623 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Memory Sources Study</title>
+<style>
+:root{--bg:#f6f5f1;--card:#fff;--ink:#1d1d1b;--muted:#63625c;--line:#dcdad2;--accent:#1f5fa8;--accent-ink:#fff;--warn-bg:#fff4d6;--warn-ink:#5c4300;--err:#a3261b;--box:#f0efe9}
+@media (prefers-color-scheme:dark){:root{--bg:#161614;--card:#21211e;--ink:#eeede8;--muted:#a5a39a;--line:#3a3934;--accent:#7fb2ee;--accent-ink:#10202f;--warn-bg:#3b3113;--warn-ink:#f3dc9a;--err:#ff8f84;--box:#2b2a26}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:720px;margin:0 auto;padding:20px 16px 64px}
+h1{font-size:1.5rem;line-height:1.25;margin:.2em 0 .5em}
+h2{font-size:1.05rem;margin:0 0 .5em}
+p{margin:.5em 0}
+.muted{color:var(--muted);font-size:.92rem}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin:14px 0}
+.banner{background:var(--warn-bg);color:var(--warn-ink);border-radius:8px;padding:10px 12px;font-size:.9rem;margin:10px 0}
+.progress{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin:6px 0 2px}
+.progress>div{height:100%;background:var(--accent)}
+.promptbox{background:var(--box);border-radius:8px;padding:12px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.92rem;white-space:pre-wrap;word-break:break-word}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.between{justify-content:space-between}
+button{font:inherit;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:9px 14px;cursor:pointer}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+button.small{padding:5px 10px;font-size:.88rem}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+fieldset{border:0;padding:0;margin:14px 0 0}
+legend,label.q{font-weight:600;padding:0;margin-bottom:4px;display:block}
+.hint{color:var(--muted);font-size:.88rem;font-weight:400;display:block}
+input[type=number]{font:inherit;width:6em;padding:7px 8px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--ink)}
+select,textarea{font:inherit;padding:7px 8px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--ink);max-width:100%}
+textarea{width:100%;min-height:76px}
+.opts{display:flex;flex-wrap:wrap;gap:6px 8px;margin-top:4px}
+.opts label{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:8px;padding:6px 10px;cursor:pointer;background:var(--card)}
+.opts.col{flex-direction:column;align-items:flex-start}
+.scale label{min-width:2.6em;justify-content:center}
+.ends{display:flex;justify-content:space-between;color:var(--muted);font-size:.82rem;max-width:26em}
+.error{color:var(--err);font-weight:600;margin-top:10px}
+ol.steps{padding-left:1.2em;margin:.4em 0}
+ol.steps li{margin:.3em 0}
+.fig{margin:12px 0 4px}
+.fig svg,.fig img{width:100%;max-width:560px;height:auto;display:block;border-radius:10px}
+.fig figcaption{font-size:.92rem;margin-top:8px}
+.fig figcaption ol{margin:.3em 0;padding-left:1.3em}
+.fig .note{color:var(--muted);font-size:.84rem}
+.s-bg{fill:var(--card);stroke:var(--line)}.s-box{fill:var(--box)}.s-line{fill:var(--line)}
+.s-hi{fill:none;stroke:var(--accent);stroke-width:2.5}.s-acc{fill:var(--accent)}
+.s-t{fill:var(--ink);font:600 12px system-ui,sans-serif}.s-m{fill:var(--muted);font:11px system-ui,sans-serif}
+.s-n{fill:var(--accent-ink);font:700 11px system-ui,sans-serif}
+details.how{margin-top:10px}details.how summary{cursor:pointer;color:var(--accent);font-weight:600}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<main id="app"></main>
+<script>
+"use strict";
+/* ===================== EDIT THIS SECTION ===================== */
+const CONFIG = {
+  draft: false,                   // shows the "not approved" banner; set false only after approval
+  studyTitle: "How does ChatGPT use what it remembers about you?",
+  minutes: "35 to 40 minutes",
+  protocolId: "Course project pilot, not for publication",
+  // Prompts drawn at random per participant from each group, shown in random order.
+  // Set to null to give every participant all prompts.
+  perParticipant: { leisure: 2, practical: 2, audience: 2, others: 2, control: 2 },
+  // Optional real screenshots to show in place of the drawn illustrations, e.g. "img/temporary.png".
+  // Crop out anything personal before using a screenshot of your own account.
+  images: { temporaryChat: "", sources: "" },
+  baselineCount: 3,               // prompts per participant that are also run in a Temporary Chat. 0 turns this off.
+  expectations: true,             // one page before any prompt: how much memory use they expect and want for each prompt
+  feltRating: true,               // per prompt, before Sources is opened: how personalized the response feels
+  retest: true,                   // recount the sources of the first prompt at the end (reliability)
+  demographics: false,            // age band, gender, occupation, computing background
+  attentionCheck: true,           // one instructed-response item on the last page
+  // Web app URL of upload_endpoint/Code.gs. When set, the last page offers "Submit anonymously".
+  submitUrl: "https://script.google.com/macros/s/AKfycbw8sVTEIc_er8_hrTNkTHR1KiJcAUXOXwVQ0v1MyAZXKrXkSwC0q_e2PGk8THE_B_AF/exec",
+  // Shown only when there is no submitUrl, or when submitting fails.
+  returnInstructions: "Email the downloaded file to alexxiong@berkeley.edu. Note that email shows the researcher who you are.",
+  // Shown only after results are submitted or downloaded, e.g. a recruitment panel's completion code. Same code for everyone.
+  completionCode: "",
+  // Shown on the last page when not empty. Keep payment separate from the results: do not ask for the study code.
+  compensationInstructions: "",
+  // Link to a separate sign-up for an optional follow-up call. Shown on the last page when not empty.
+  followUpUrl: "",
+  withdrawal: "Email alexxiong@berkeley.edu with your study code and your answers will be deleted.",
+  consentText: "What this is. This is a pilot study for a UC Berkeley course project. It looks at how ChatGPT uses what it remembers about you, and how you feel about that. The student researcher can be reached at alexxiong@berkeley.edu.\n\nWhat you will do. You will send 10 short prompts to your own ChatGPT account, look at the Sources panel under each response, and answer questions in this form. It takes about 35 to 40 minutes. You need a ChatGPT account with memory turned on.\n\nIt is voluntary and unpaid. You can skip any prompt or stop at any time. Choosing not to take part, or stopping partway, will not affect your grades or your relationship with the researcher or any instructor.\n\nPossible discomfort. The Sources panel may show information ChatGPT has stored about you that you did not expect. The prompts also add chats to your ChatGPT history, and ChatGPT may save new memories from them. The last page explains how to remove both.\n\nWhat is collected. The form records numbers, ratings and the choices you click, plus two optional written answers. It does not record your name, email address, account, the text of your memories or chats, or exact times. Your answers are sent to a private folder that only the researcher can open, labeled with a random study code.\n\nLimits of anonymity. This is a small study. The researcher may know who was invited and can see when each response arrives, so complete anonymity cannot be guaranteed.\n\nHow answers are used. Your answers will be used for a class report and to improve the study design. They will not be published in a research paper. Results will be reported only as totals and averages.\n\nReview status. This pilot is a class project. It has not been reviewed by an ethics review board.",
+};
+// Areas of life. Sensitive areas are never recorded by name: the form stores only whether ANY of them was used.
+const AREAS = [
+  { key:"work",        label:"work or career" },
+  { key:"education",   label:"education or learning" },
+  { key:"money",       label:"money or purchases" },
+  { key:"family",      label:"family or caregiving" },
+  { key:"friends",     label:"friends or social life" },
+  { key:"home",        label:"home or housing" },
+  { key:"food",        label:"food" },
+  { key:"hobbies",     label:"hobbies, sports or entertainment" },
+  { key:"travel",      label:"travel or location" },
+  { key:"personality", label:"personality, goals or values" },
+  { key:"style",       label:"how I like responses" },
+  { key:"health",      label:"health, physical or mental",        sensitive:true },
+  { key:"partner",     label:"partner or dating",                 sensitive:true },
+  { key:"identity",    label:"identity, beliefs or background",   sensitive:true },
+  { key:"legal",       label:"legal or official matters",         sensitive:true },
+  { key:"other",       label:"other" },
+];
+const NAMED = AREAS.filter(a => !a.sensitive), SENSITIVE = AREAS.filter(a => a.sensitive);
+// Groups: who the output is for, and how much the request invites personal context.
+//   leisure   advice for myself, leisure and daily life      practical  decisions for myself
+//   audience  writing that other people will read             others     about another person
+//   control   low-personal requests
+// "expects" lists the areas a prompt naturally invites. Any other area the listed sources come from is spillover.
+// "forOthers" marks prompts whose output someone else would read. No prompt targets a sensitive area on purpose.
+const PROMPTS = [
+  { id:"l_weekend",  group:"leisure",   expects:["hobbies","food","travel","friends","family"], text:"Plan a relaxing weekend for me." },
+  { id:"l_hobby",    group:"leisure",   expects:["hobbies","personality"],                      text:"Suggest a new hobby I might enjoy." },
+  { id:"l_dinner",   group:"leisure",   expects:["food"],                                       text:"What should I cook for dinner tonight?" },
+  { id:"l_book",     group:"leisure",   expects:["hobbies","education","personality"],          text:"Recommend a book for me to read next." },
+  { id:"d_money",    group:"practical", expects:["money"],                                      text:"Suggest one way I could save money this month." },
+  { id:"d_home",     group:"practical", expects:["home"],                                       text:"Suggest one improvement I could make to where I live." },
+  { id:"d_trip",     group:"practical", expects:["travel","money","hobbies"],                   text:"Suggest a destination for my next vacation." },
+  { id:"d_goal",     group:"practical", expects:["personality"],                                text:"Suggest a goal I could set for myself this year." },
+  { id:"d_week",     group:"practical", expects:["work","education","personality"],             text:"Help me plan my priorities for next week." },
+  { id:"w_bio",      group:"audience",  expects:["work","education"], forOthers:true,           text:"Draft a short professional bio I could put on a website." },
+  { id:"w_intro",    group:"audience",  expects:["work","education"], forOthers:true,           text:"Write a two-sentence introduction I could use at a networking event." },
+  { id:"w_toast",    group:"audience",  expects:["family"],           forOthers:true,           text:"Write a short toast for a family gathering." },
+  { id:"w_neighbor", group:"audience",  expects:["home"],             forOthers:true,           text:"Write a short note introducing myself to a new neighbor." },
+  { id:"o_gift",     group:"others",    expects:["work","education"],                           text:"Suggest a birthday gift for a classmate or coworker I don't know well." },
+  { id:"o_interview",group:"others",    expects:["friends"],                                    text:"A friend is nervous about a job interview. What advice should I give them?" },
+  { id:"o_lonely",   group:"others",    expects:["friends"],                                    text:"A friend moved to a new city and feels lonely. How can I support them?" },
+  { id:"o_kidbook",  group:"others",    expects:[],                                             text:"Recommend a book for a ten-year-old who likes animals." },
+  { id:"c_interest", group:"control",   expects:[],                                             text:"Explain how compound interest works." },
+  { id:"c_packing",  group:"control",   expects:[],                                             text:"Give me a packing list for a three-day trip." },
+  { id:"c_landlord", group:"control",   expects:[],                   forOthers:true,           text:"Write a polite email asking a landlord to fix a broken heater." },
+  { id:"c_history",  group:"control",   expects:[],                                             text:"Summarize the main causes of World War I in five bullet points." },
+  { id:"c_code",     group:"control",   expects:[],                                             text:"Write a Python function that reverses a string." },
+];
+const PILOT_BASELINE = ["l_weekend", "w_bio", "c_interest"];   // baseline prompts in the fixed-order pilot version
+// Asked before the prompts and again at the end, to measure change.
+const ATTITUDES = [
+  ["comfort", "I am comfortable with ChatGPT remembering things about me."],
+  ["sense",   "I have a good sense of what ChatGPT remembers about me."],
+  ["control", "I feel in control of how ChatGPT uses what it remembers."],
+];
+const FINAL_LIKERT = [
+  ["matched",   "The sources matched what I expected ChatGPT to know about me."],
+  ["understood","I understood why each source was used."],
+  ["helped",    "Seeing the sources made me more comfortable with ChatGPT's memory."],
+  ["change",    "I want to change or delete something ChatGPT remembers about me."],
+];
+const LEVELS = [["none","None"],["little","A little"],["lot","A lot"]];
+// Blocks free-text answers that look like they contain contact details or links.
+const PII = /[\w.+-]+@[\w-]+\.[\w.-]+|https?:\/\/|www\.|(?:\+?\d[\s().-]?){7,}/i;
+/* =================== END OF EDITABLE SECTION ================== */
+
+const SCHEMA = 6, KEY = "memory_sources_survey_v1";
+const app = document.getElementById("app");
+const params = new URLSearchParams(location.search);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let S = load() || fresh();
+let shownAt = Date.now();
+
+function fresh(){
+  const mode = params.get("all") === "1" ? "all" : CONFIG.perParticipant ? "sample" : "all_random";
+  return { schema:SCHEMA, participant_id:newId(), mode, started:new Date().toISOString(), finished:null, step:0,
+           background:{}, comprehension_fails:0, prompts:assign(mode), final:{}, submitted:false, downloaded:false };
+}
+function newId(){
+  const a = new Uint8Array(4); (window.crypto || {getRandomValues:x=>x.forEach((_,i)=>x[i]=Math.random()*256)}).getRandomValues(a);
+  return "P" + Array.from(a, b => b.toString(16).padStart(2,"0")).join("");
+}
+function shuffle(a){ a = a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function assign(mode){
+  let picked = [];
+  if(mode === "all") picked = PROMPTS.slice();
+  else if(mode === "all_random") picked = shuffle(PROMPTS);
+  else {
+    for(const [g,n] of Object.entries(CONFIG.perParticipant)) picked.push(...shuffle(PROMPTS.filter(p=>p.group===g)).slice(0,n));
+    picked = shuffle(picked);
+  }
+  // Baseline prompts are also run in a Temporary Chat. One is a control prompt where possible; order (before/after) is random.
+  let base = [];
+  if(CONFIG.baselineCount > 0){
+    if(mode === "all") base = PILOT_BASELINE.slice(0, CONFIG.baselineCount);
+    else {
+      const ctrl = shuffle(picked.filter(p => p.group === "control")).slice(0, CONFIG.baselineCount > 1 ? 1 : 0);
+      const rest = shuffle(picked.filter(p => !ctrl.includes(p) && p.group !== "control"));
+      base = ctrl.concat(rest).slice(0, CONFIG.baselineCount).map(p => p.id);
+    }
+  }
+  return picked.map((p,i)=>({ id:p.id, group:p.group, text:p.text, expects:p.expects, for_others:!!p.forOthers, order:i+1, seconds:0, skipped:false, done:false,
+    baseline: !base.includes(p.id) ? "none" : mode === "all" ? "after" : (Math.random() < 0.5 ? "before" : "after") }));
+}
+function load(){
+  try{
+    const s = JSON.parse(localStorage.getItem(KEY));
+    if(s && s.schema===SCHEMA) return s;
+    if(s && s.schema < SCHEMA && (s.prompts||[]).some(p => p.done)) localStorage.setItem(KEY+"_old", JSON.stringify(s));   // earlier form version
+    return null;
+  }catch(e){ return null; }
+}
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
+
+// Steps: 0 intro, 1 background, 2 setup, then the expectations page (if on), the prompts, final, done.
+const P0 = CONFIG.expectations ? 4 : 3;                    // step number of the first prompt
+const nP = () => S.prompts.length;
+const stepKind = i => i===0 ? "intro" : i===1 ? "background" : i===2 ? "setup" : i < P0 ? "expect" : i < P0+nP() ? "prompt" : i===P0+nP() ? "final" : "done";
+function go(i){ tick(); S.step = i; save(); render(); window.scrollTo(0,0); }
+function tick(){ if(stepKind(S.step)==="prompt"){ S.prompts[S.step-P0].seconds += Math.round((Date.now()-shownAt)/1000); } shownAt = Date.now(); }
+
+function header(){
+  const total = P0 + 1 + nP(), pct = Math.round(100*Math.min(S.step,total)/total);
+  return (CONFIG.draft ? `<div class="banner" role="note"><strong>Draft for testing.</strong> Not approved for collecting participant data.</div>` : "") +
+    `<div class="progress" role="progressbar" aria-label="Progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><div style="width:${pct}%"></div></div>`;
+}
+function radios(name, opts, val, cls=""){
+  return `<div class="opts ${cls}">` + opts.map(o => { const [v,l] = Array.isArray(o)?o:[o,o];
+    return `<label><input type="radio" name="${name}" value="${esc(v)}" ${String(val)===String(v)?"checked":""}> ${esc(l)}</label>`; }).join("") + `</div>`;
+}
+function scale(name, val, lo, hi){
+  return radios(name, [1,2,3,4,5,6,7], val, "scale") + `<div class="ends"><span>1 = ${esc(lo)}</span><span>7 = ${esc(hi)}</span></div>`;
+}
+const agree = (name, val) => scale(name, val ?? "", "strongly disagree", "strongly agree");
+function q(legend, body, hint=""){ return `<fieldset><legend>${legend}${hint ? `<span class="hint">${hint}</span>` : ""}</legend>${body}</fieldset>`; }
+function num(name, val){ return `<input type="number" id="${name}" name="${name}" min="0" max="99" step="1" inputmode="numeric" value="${val ?? ""}">`; }
+function nav(back, nextLabel, extra=""){
+  return `<p id="err" class="error" role="alert" hidden></p><div class="row between" style="margin-top:18px">
+    <div class="row">${back ? `<button type="button" id="back">Back</button>` : ""}${extra}</div>
+    <button type="submit" class="primary">${esc(nextLabel)}</button></div>`;
+}
+function fail(msg){ const e = document.getElementById("err"); e.textContent = msg; e.hidden = false; e.scrollIntoView({block:"center"}); return false; }
+// Reads the chosen radio even when the group is disabled.
+function val(form, name){ const el = form.querySelector(`input[name="${name}"]:checked`); return el ? el.value : null; }
+function intOrNull(v){ if(v===null || v==="" ) return null; const n = Number(v); return Number.isInteger(n) && n>=0 && n<=99 ? n : NaN; }
+function copyBtn(id){ return `<button type="button" class="small" data-copy="${id}">Copy</button>`; }
+function wireCopy(){
+  app.querySelectorAll("[data-copy]").forEach(btn => btn.onclick = async () => {
+    const t = document.getElementById(btn.dataset.copy).textContent;
+    try{ await navigator.clipboard.writeText(t); btn.textContent = "Copied"; }catch(e){ btn.textContent = "Select and copy"; }
+    setTimeout(()=>btn.textContent="Copy", 1500);
+  });
+}
+function wireCommon(form, onSubmit){
+  const b = document.getElementById("back"); if(b) b.onclick = () => go(S.step-1);
+  wireCopy();
+  form.onsubmit = e => { e.preventDefault(); if(onSubmit(form) !== false) go(S.step+1); };
+}
+function downloadText(text, name){
+  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], {type:"application/json"})); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+}
+
+// Drawn illustrations with step-by-step descriptions. They are schematic, not screenshots; set CONFIG.images to use real ones.
+const dot = (x,y,n) => `<circle class="s-acc" cx="${x}" cy="${y}" r="10"/><text class="s-n" x="${x}" y="${y+4}" text-anchor="middle">${n}</text>`;
+function figure(img, alt, svg, steps, note){
+  const pic = img ? `<img src="${esc(img)}" alt="${esc(alt)}">` : svg;
+  return `<figure class="fig">${pic}<figcaption><ol>${steps.map(t => `<li>${t}</li>`).join("")}</ol>
+    <span class="note">${img ? "" : "Illustration only. "}${note}</span></figcaption></figure>`;
+}
+function figTemp(){
+  const alt = "A new ChatGPT chat. A control labeled Temporary is selected at the top. Below it, two choices appear, Personalized and Unpersonalized, with Unpersonalized selected. The message box is at the bottom.";
+  const svg = `<svg viewBox="0 0 560 250" role="img" aria-label="${alt}">
+    <rect class="s-bg" x="1" y="1" width="558" height="248" rx="10"/>
+    <rect class="s-box" x="16" y="14" width="112" height="28" rx="14"/><text class="s-t" x="72" y="33" text-anchor="middle">ChatGPT &#9662;</text>
+    <rect class="s-box" x="424" y="14" width="120" height="28" rx="14"/><rect class="s-hi" x="424" y="14" width="120" height="28" rx="14"/><text class="s-t" x="484" y="33" text-anchor="middle">Temporary</text>${dot(416,14,1)}
+    <text class="s-t" x="280" y="92" text-anchor="middle">Temporary chat</text>
+    <rect class="s-box" x="140" y="110" width="126" height="32" rx="16"/><text class="s-m" x="203" y="131" text-anchor="middle">Personalized</text>
+    <rect class="s-box" x="286" y="110" width="140" height="32" rx="16"/><rect class="s-hi" x="286" y="110" width="140" height="32" rx="16"/><text class="s-t" x="356" y="131" text-anchor="middle">Unpersonalized</text>${dot(432,108,2)}
+    <rect class="s-box" x="60" y="190" width="440" height="38" rx="19"/><text class="s-m" x="84" y="214">Paste the prompt here and send</text>${dot(54,190,3)}</svg>`;
+  return figure(CONFIG.images.temporaryChat, alt, svg, [
+    `Start a new chat and select <strong>Temporary</strong>. Look at the top of the chat window, or open the model menu. The keyboard shortcut is Ctrl+Shift+N, or Cmd+Shift+N on a Mac.`,
+    `Before you send anything, choose <strong>Unpersonalized</strong>. This is the mode that does not use memory. "Personalized" still uses it.`,
+    `Paste the prompt and send it.`], "Your screen may look different, and the button may be in another place.");
+}
+function figSources(){
+  const alt = "A ChatGPT response with a row of small buttons under it. One button, Sources, is highlighted. A panel titled Sources is open on the right. It shows a heading Memory with a number beside it, and a list of items labeled Memory or Past chat.";
+  const svg = `<svg viewBox="0 0 560 260" role="img" aria-label="${alt}">
+    <rect class="s-bg" x="1" y="1" width="558" height="258" rx="10"/>
+    ${[30,48,66,84].map((y,i) => `<rect class="s-line" x="20" y="${y}" width="${[290,270,284,180][i]}" height="8" rx="4"/>`).join("")}
+    ${[20,48,76,104,160].map(x => `<rect class="s-box" x="${x}" y="110" width="20" height="20" rx="5"/>`).join("")}
+    <rect class="s-box" x="132" y="110" width="20" height="20" rx="5"/><rect class="s-hi" x="129" y="107" width="26" height="26" rx="7"/>
+    <path d="M137 115h4.5v10H137zM142.5 115H147v10h-4.5z" class="s-acc"/>${dot(142,96,1)}<text class="s-t" x="142" y="152" text-anchor="middle">Sources</text>
+    <rect class="s-box" x="336" y="14" width="210" height="232" rx="8"/><text class="s-t" x="350" y="38">Sources</text>
+    <text class="s-t" x="350" y="64">Memory &#183; 3</text><rect class="s-hi" x="344" y="50" width="86" height="20" rx="6"/>${dot(444,60,2)}
+    ${[["Memory",86],["Past chat",138],["Memory",190]].map(([t,y]) => `<text class="s-m" x="350" y="${y}">${t}</text><rect class="s-line" x="350" y="${y+8}" width="176" height="8" rx="4"/><rect class="s-line" x="350" y="${y+22}" width="120" height="8" rx="4"/>`).join("")}${dot(540,134,3)}</svg>`;
+  return figure(CONFIG.images.sources, alt, svg, [
+    `Under the response there is a row of small buttons. Click <strong>Sources</strong>. If you do not see it, check the "..." menu in that row. If it is not there either, enter 0.`,
+    `A panel opens. The number beside the heading is how many items it lists.`,
+    `Each item is labeled <strong>Memory</strong> or <strong>Past chat</strong>. If the list ends with "more", click it to see every item.`], "Your screen may look different.");
+}
+const how = (label, fig) => `<details class="how"><summary>${label}</summary>${fig}</details>`;
+
+function render(){
+  shownAt = Date.now();
+  ({intro, background, setup, expect, prompt, final, done})[stepKind(S.step)]();
+}
+
+function intro(){
+  let old = null; try{ old = localStorage.getItem(KEY+"_old"); }catch(e){}
+  app.innerHTML = header() + (old ? `<div class="banner" id="oldbox">Answers from an earlier version of this form are saved in this browser.
+    <button type="button" class="small" id="oldDl">Download them</button> <button type="button" class="small" id="oldRm">Discard</button></div>` : "") + `<h1>${esc(CONFIG.studyTitle)}</h1>
+  <p>You will send a few prompts to your own ChatGPT account, look at the Sources panel under each response, and answer short questions here. There are ${nP()} prompts and it takes ${esc(CONFIG.minutes)}. Your progress is saved in this browser, so you can pause and come back.</p>
+  <div class="card"><h2>What this form records</h2>
+    <ol class="steps"><li>Counts and ratings that you enter.</li><li>Which broad areas of life were used, such as work or food.</li><li>For four sensitive areas (health, partner or dating, identity or beliefs, and legal matters), only whether <em>any</em> of them was used. Never which one.</li>${CONFIG.demographics ? `<li>A few questions about you in broad bands, each with a "prefer not to say" option.</li>` : ""}<li>How long each prompt took.</li><li>Two optional written answers at the end. These are screened automatically: an answer that contains an email address, phone number or link cannot be submitted.</li></ol>
+    <p><strong>It never records what your memories say.</strong> Please do not type or paste memory text, chat text or anything private. Your answers stay in this browser until you choose to send them at the end.</p></div>
+  <div class="card"><h2>Before you agree</h2>
+    <p>You may see information ChatGPT has stored about you that surprises you. You can skip any prompt or stop at any time.</p>
+    ${CONFIG.consentText.split("\n\n").map(t => `<p class="muted">${esc(t)}</p>`).join("")}
+    <p class="muted">Study: ${esc(CONFIG.protocolId)}. To withdraw your answers later: ${esc(CONFIG.withdrawal)}</p></div>
+  <form id="f"><div class="opts col">
+    <label><input type="checkbox" name="adult" ${S.background.adult?"checked":""}> I am 18 or older.</label>
+    <label><input type="checkbox" name="consent" ${S.background.consent?"checked":""}> I have read the information above and agree to take part.</label></div>
+    ${nav(false,"Start")}</form>`;
+  wireCommon(document.getElementById("f"), f => {
+    if(!f.adult.checked || !f.consent.checked) return fail("Please tick both boxes to continue.");
+    S.background.adult = true; S.background.consent = true;
+  });
+  if(old){
+    document.getElementById("oldDl").onclick = () => downloadText(old, "memory-sources-earlier-version.json");
+    document.getElementById("oldRm").onclick = () => { if(confirm("Discard the answers from the earlier version?")){ try{ localStorage.removeItem(KEY+"_old"); }catch(e){} document.getElementById("oldbox").remove(); } };
+  }
+}
+
+const BG_USE = [
+  ["memory_on", "Do you use ChatGPT with memory turned on?", [["yes","Yes"],["no","No"],["unsure","Not sure"]], "Settings, then Personalization, then Memory."],
+  ["memory_months", "How long have you used ChatGPT with memory on?", [["lt1","Under 1 month"],["1to6","1 to 6 months"],["6to12","6 to 12 months"],["gt12","Over a year"],["unsure","Not sure"]]],
+  ["frequency", "How often do you use ChatGPT?", [["daily","Daily"],["weekly_multi","A few times a week"],["weekly","About weekly"],["less","Less often"]]],
+  ["plan", "Which ChatGPT plan are you on?", [["free","Free"],["plus","Plus"],["pro","Pro"],["org","Team, Enterprise or Edu"],["unsure","Not sure"]]],
+  ["device", "What are you using ChatGPT on for this study?", [["computer","A computer"],["mobile","A phone or tablet"]]],
+  ["knew_sources", "Before today, had you ever opened the Sources panel under a response?", [["yes","Yes"],["no","No"],["unsure","Not sure"]]],
+];
+const BG_DEMO = [
+  ["age", "Your age", [["18-24","18 to 24"],["25-34","25 to 34"],["35-44","35 to 44"],["45-54","45 to 54"],["55+","55 or older"],["na","Prefer not to say"]]],
+  ["gender", "Your gender", [["woman","Woman"],["man","Man"],["nonbinary","Non-binary"],["another","Another gender"],["na","Prefer not to say"]]],
+  ["occupation", "Which best describes you?", [["student","Student"],["employed","Employed"],["other","Other"],["na","Prefer not to say"]]],
+  ["computing", "Do you work or study in computing or AI?", [["yes","Yes"],["no","No"],["na","Prefer not to say"]]],
+];
+function background(){
+  const b = S.background, items = BG_USE.concat(CONFIG.demographics ? BG_DEMO : []);
+  const block = list => list.map(([k,t,o,h]) => q(esc(t), radios(k, o, b[k]), h ? esc(h) : "")).join("");
+  app.innerHTML = header() + `<h1>About you and your ChatGPT use</h1><form id="f">
+    ${block(BG_USE.slice(0,1))}
+    <p id="inel" class="banner" hidden>This study needs an account with memory on. You can turn it on and continue, or stop here. Thank you either way.</p>
+    ${block(BG_USE.slice(1))}
+    <div class="card"><h2>Your views right now</h2>${ATTITUDES.map(([k,t]) => q(esc(t), agree("pre_"+k, b["pre_"+k]))).join("")}</div>
+    ${CONFIG.demographics ? `<div class="card"><h2>About you</h2>${block(BG_DEMO)}</div>` : ""}
+    ${nav(true,"Next")}</form>`;
+  const f = document.getElementById("f");
+  const upd = () => document.getElementById("inel").hidden = val(f,"memory_on") !== "no";
+  f.onchange = upd; upd();
+  wireCommon(f, f => {
+    const keys = items.map(x => x[0]).concat(ATTITUDES.map(x => "pre_"+x[0]));
+    for(const k of keys) if(!val(f,k)) return fail("Please answer every question.");
+    for(const k of keys) b[k] = k.startsWith("pre_") ? Number(val(f,k)) : val(f,k);
+  });
+}
+
+function setup(){
+  app.innerHTML = header() + `<h1>How each prompt works</h1>
+  <div class="card"><ol class="steps">
+    <li>Open ChatGPT in another tab or window. Keep this form open.</li>
+    <li>For every prompt, start a <strong>new chat</strong>. Use a normal chat, not a temporary one, unless a step tells you to.</li>
+    <li>Send the prompt exactly as shown. Use the same model for all prompts.</li>
+    <li>Under the response, open <strong>Sources</strong>. It lists items labeled Memory or Past chat. If there is no Sources button, count that as zero.</li>
+    <li>Answer the questions here with numbers and clicks only.</li>
+    <li>You never need to share screenshots, chat links or the text of a response with anyone.</li></ol></div>
+  <div class="card"><h2>Where to find Sources</h2>${figSources()}</div>
+  ${CONFIG.baselineCount > 0 ? `<div class="card"><h2>How to open a temporary chat</h2><p>A few prompts also ask you to send the same request in a temporary chat, to compare.</p>${figTemp()}</div>` : ""}
+  <p>You have ${nP()} prompts. Each takes about three minutes. You can stop between prompts and resume later in the same browser.</p>
+  <form id="f"><div class="card"><h2>Quick check before you start</h2>
+    ${q("For the main prompts, which kind of chat do you use?", radios("c1", [["same","The same chat for every prompt"],["new","A new normal chat for each prompt"],["temp","A temporary chat for each prompt"]], ""))}
+    ${q("If a response has no Sources button, what do you enter for the number of sources?", radios("c2", [["skip","Nothing, skip the prompt"],["one","1"],["zero","0"]], ""))}</div>
+    ${nav(true,"Next")}</form>`;
+  wireCommon(document.getElementById("f"), f => {
+    if(!val(f,"c1") || !val(f,"c2")) return fail("Please answer both questions.");
+    if(val(f,"c1") !== "new" || val(f,"c2") !== "zero"){ S.comprehension_fails++; save(); return fail("One of those is not right. Please reread the steps above and try again."); }
+  });
+}
+
+// Asked once, before any prompt is sent and before any Sources panel is seen, so later exposure cannot shape the answers.
+function expect(){
+  app.innerHTML = header() + `<h1>Before you send anything</h1>
+  <p>These are the prompts you will send. <strong>Do not open ChatGPT yet.</strong> For each one, say what you expect and what you would want. There are no right answers.</p>
+  <form id="f">${S.prompts.map((p,i) => `<div class="card"><div class="promptbox">${esc(p.text)}</div>
+    ${q("How much do you <em>expect</em> ChatGPT to use what it knows about you?", radios("e_"+i, LEVELS, p.expect))}
+    ${q("How much would you <em>want</em> it to?", radios("w_"+i, LEVELS, p.want))}</div>`).join("")}
+  ${nav(true,"Show the first prompt")}</form>`;
+  wireCommon(document.getElementById("f"), f => {
+    for(let i=0;i<nP();i++) if(!val(f,"e_"+i) || !val(f,"w_"+i)) return fail("Please answer both questions for every prompt.");
+    S.prompts.forEach((p,i) => { p.expect = val(f,"e_"+i); p.want = val(f,"w_"+i); });
+  });
+}
+
+function prompt(){
+  const i = S.step-P0, p = S.prompts[i], base = CONFIG.baselineCount > 0 ? p.baseline : "none";
+  let n = 0; const h = t => `<h2>${++n}. ${t}</h2>`;
+  const tempCard = () => `<div class="card">${h(base==="before" ? "First, send the prompt in a Temporary Chat" : "Now send the same prompt in a Temporary Chat")}
+    <p>Open a <strong>Temporary Chat</strong> in ChatGPT and choose <strong>Unpersonalized</strong> before sending. That mode does not use memory. Send the prompt there and read the response.${base==="before" ? " Then go on to the next step." : ""}</p>
+    <div class="promptbox" id="ttext">${esc(p.text)}</div><div class="row" style="margin-top:8px">${copyBtn("ttext")}</div>
+    ${how("Show me how to open a temporary chat", figTemp())}</div>`;
+  const compareCard = () => `<div class="card">${h("Compare the two responses")}
+    ${q("Did the temporary chat response include personal details about you?<span class=\"hint\">It should not, if Unpersonalized was selected.</span>", radios("temp_personal", [["no","No"],["yes","Yes"],["unsure","Not sure"]], p.temp_personal))}
+    ${q("How different were the two responses?", radios("diff", [["hardly","Hardly different"],["somewhat","Somewhat different"],["very","Very different"]], p.diff))}
+    ${q("Which response would you rather have received?", radios("prefer", [["memory","The normal chat one"],["temp","The temporary chat one"],["none","No preference"]], p.prefer))}
+    ${q("How did using what it knows about you affect the normal chat response?", scale("gain", p.gain ?? "", "made it much worse", "made it much better"), "4 means it made no difference.")}</div>`;
+
+  app.innerHTML = header() + `<p class="muted">Prompt ${i+1} of ${nP()}</p><form id="f">
+  ${base==="before" ? tempCard() : ""}
+  <div class="card">${h(base==="before" ? "Now start a new normal chat and send the same prompt" : "Start a new chat and send this")}
+    <div class="promptbox" id="ptext">${esc(p.text)}</div><div class="row" style="margin-top:8px">${copyBtn("ptext")}</div></div>
+
+  ${CONFIG.feltRating ? `<div class="card">${h("Read the response. Do not open Sources yet")}
+    ${q("From reading it, how much does this response seem to use what ChatGPT knows about you?", scale("felt", p.felt ?? "", "not at all, anyone could have received it", "a great deal, it is clearly written for me"), "You cannot change this after the next step.")}</div>` : ""}
+
+  <div class="card" id="srcCard">${h("Open Sources under the response")}
+    <label class="q" for="n_sources">How many items does Sources list?<span class="hint">Count Memory and Past chat items. Expand "more" if shown. Enter 0 if there is no Sources button or no such items.</span></label>${num("n_sources", p.n_sources)}
+    ${how("Show me where Sources is", figSources())}
+    <div id="counts" hidden>
+      <fieldset><legend>Of those, how many are labeled</legend>
+        <div class="row"><label for="n_memory">Memory</label>${num("n_memory", p.n_memory)}<label for="n_pastchat">Past chat</label>${num("n_pastchat", p.n_pastchat)}</div></fieldset>
+      <fieldset id="studyq" hidden><label class="q" for="n_study_chats">How many of the Past chat items are chats you created for this study?</label>${num("n_study_chats", p.n_study_chats)}</fieldset>
+      <fieldset><label class="q" for="n_noticeable">How many could you already tell were used, just from reading the response?<span class="hint">Count the ones that showed up visibly in what it wrote.</span></label>${num("n_noticeable", p.n_noticeable)}</fieldset>
+      <fieldset><label class="q" for="n_unexpected">How many did you <em>not</em> expect to be used here?</label>${num("n_unexpected", p.n_unexpected)}</fieldset>
+      <fieldset><label class="q" for="n_inappropriate">How many felt inappropriate to use for this request?</label>${num("n_inappropriate", p.n_inappropriate)}</fieldset>
+      <fieldset><label class="q" for="n_cross">How many came from a different area of your life than this request?<span class="hint">For example, a health or work detail used in a request about a hobby.</span></label>${num("n_cross", p.n_cross)}</fieldset>
+      <fieldset><legend>Which areas of your life do the listed sources come from?<span class="hint">Tick every area that at least one source belongs to.</span></legend>
+        <div class="opts">${NAMED.map(a=>`<label><input type="checkbox" name="areas" value="${a.key}" ${(p.areas||[]).includes(a.key)?"checked":""}> ${esc(a.label)}</label>`).join("")}
+          <label><input type="checkbox" name="areas_none" ${p.areas_only_sensitive?"checked":""}> none of these</label></div></fieldset>
+      ${q("Do any of the listed sources concern one of these four areas?", radios("sensitive_any", [["no","No"],["yes","Yes"],["unsure","Not sure"]], p.sensitive_any), esc(SENSITIVE.map(a=>a.label).join("; ")) + ".<br>Answer only yes or no. This form does not record which one.")}
+      <div id="smore" hidden>${q("Was using it appropriate for this request?", radios("sensitive_appropriate", [["yes","Yes"],["no","No"],["unsure","Not sure"]], p.sensitive_appropriate))}</div>
+    </div></div>
+
+  <div class="card">${h("Your overall view of the normal chat response")}
+    ${q("Did it include personal details that were <em>not</em> listed in Sources?", radios("unlisted", [["no","No"],["yes","Yes"],["unsure","Not sure"]], p.unlisted))}
+    ${q("Did it make a judgment about what kind of person you are?", radios("judgment", [["no","No"],["yes","Yes"]], p.judgment), `For example, "you tend to overwork" or "you like to optimize things".`)}
+    <div id="jmore" hidden>
+      ${q("Was that judgment accurate?", radios("judgment_accurate", [["yes","Yes"],["partly","Partly"],["no","No"]], p.judgment_accurate))}
+      ${q("How did you feel about ChatGPT making that judgment?", radios("judgment_welcome", [["yes","Comfortable"],["neutral","Neutral"],["no","Uncomfortable"]], p.judgment_welcome))}</div>
+    ${q("How much did it personalize the response?", radios("amount", [["too_little","Too little"],["about_right","About right"],["too_much","Too much"]], p.amount))}
+    ${q("Overall, how appropriate was its use of what it knows about you?", scale("appropriate", p.appropriate ?? "", "not at all", "completely"))}</div>
+  ${base==="after" ? tempCard() : ""}
+  ${base!=="none" ? compareCard() : ""}
+  ${nav(true, i===nP()-1 ? "Finish prompts" : "Next prompt", `<button type="button" id="skip">Skip this prompt</button>`)}</form>`;
+
+  const f = document.getElementById("f"), $ = id => document.getElementById(id);
+  const upd = () => {
+    if(CONFIG.feltRating){
+      $("srcCard").hidden = !val(f,"felt");                                                   // Sources questions appear after the rating
+      const lock = f.n_sources.value !== "";                                                  // and the rating is fixed once a count is entered
+      f.querySelectorAll('input[name="felt"]').forEach(r => r.disabled = lock);
+    }
+    $("counts").hidden = !(Number(f.n_sources.value) > 0);
+    $("studyq").hidden = !(Number(f.n_pastchat.value) > 0);
+    $("jmore").hidden = val(f,"judgment") !== "yes";
+    $("smore").hidden = val(f,"sensitive_any") !== "yes";
+  };
+  f.oninput = upd; f.onchange = upd; upd();
+  $("skip").onclick = () => { p.skipped = true; p.done = true; go(S.step+1); };
+  wireCommon(f, f => {
+    if(CONFIG.feltRating && !val(f,"felt")) return fail("Please rate how much the response seems to use what ChatGPT knows about you, before opening Sources.");
+    const n = intOrNull(f.n_sources.value);
+    if(n===null || Number.isNaN(n)) return fail("Enter the number of sources as a whole number. Use 0 if there were none.");
+    const out = { n_sources:n, n_memory:null, n_pastchat:null, n_study_chats:null, n_noticeable:null, n_unexpected:null, n_inappropriate:null, n_cross:null };
+    if(n > 0){
+      for(const k of ["n_memory","n_pastchat","n_noticeable","n_unexpected","n_inappropriate","n_cross"]){
+        const v = intOrNull(f[k].value);
+        if(v===null || Number.isNaN(v)) return fail("Fill in every count about the sources with a whole number.");
+        if(v > n) return fail("One of the counts is larger than the number of sources.");
+        out[k] = v;
+      }
+      if(out.n_memory + out.n_pastchat > n) return fail("Memory plus Past chat is larger than the number of sources.");
+      if(out.n_pastchat > 0){
+        const v = intOrNull(f.n_study_chats.value);
+        if(v===null || Number.isNaN(v) || v > out.n_pastchat) return fail("Say how many Past chat items came from this study. It cannot be more than the Past chat count.");
+        out.n_study_chats = v;
+      }
+    }
+    let sa = null, areas = [], onlySens = false;
+    if(n > 0){
+      areas = [...f.querySelectorAll('input[name="areas"]:checked')].map(e => e.value); onlySens = f.areas_none.checked;
+      if(!areas.length && !onlySens) return fail("Tick the areas the listed sources come from, or choose none of these.");
+      if(areas.length && onlySens) return fail("You ticked some areas and also none of these. Please choose one or the other.");
+      sa = val(f,"sensitive_any");
+      if(!sa) return fail("Please answer the question about the four sensitive areas.");
+      if(sa==="yes" && !val(f,"sensitive_appropriate")) return fail("Please say whether using the sensitive source was appropriate.");
+    }
+    for(const k of ["unlisted","judgment","amount","appropriate"]) if(!val(f,k)) return fail("Please answer every question about your overall view.");
+    const j = val(f,"judgment");
+    if(j==="yes" && (!val(f,"judgment_accurate") || !val(f,"judgment_welcome"))) return fail("Please say whether the judgment was accurate and how you felt about it.");
+    const cmp = { temp_personal:null, diff:null, prefer:null, gain:null };
+    if(base !== "none"){
+      for(const k of Object.keys(cmp)){ if(!val(f,k)) return fail("Please answer every question comparing the two responses."); cmp[k] = k==="gain" ? Number(val(f,k)) : val(f,k); }
+    }
+    Object.assign(p, out, cmp, {
+      felt: CONFIG.feltRating ? Number(val(f,"felt")) : null,
+      areas, areas_only_sensitive: onlySens,
+      sensitive_any: sa, sensitive_appropriate: sa==="yes" ? val(f,"sensitive_appropriate") : null,
+      unlisted: val(f,"unlisted"), judgment: j,
+      judgment_accurate: j==="yes" ? val(f,"judgment_accurate") : null, judgment_welcome: j==="yes" ? val(f,"judgment_welcome") : null,
+      amount: val(f,"amount"), appropriate: Number(val(f,"appropriate")), skipped:false, done:true });
+  });
+}
+
+function final(){
+  const x = S.final, rt = CONFIG.retest ? S.prompts.find(p => p.done && !p.skipped) : null;
+  const likert = FINAL_LIKERT.map(([k,t]) => q(esc(t), agree(k, x[k])));
+  if(CONFIG.attentionCheck) likert.splice(2, 0, q("To show you are reading, select 2 for this statement.", agree("attention", x.attention)));
+  app.innerHTML = header() + `<h1>A few last questions</h1><form id="f">
+    ${rt ? `<div class="card"><h2>One recount</h2>
+      <p>Go back to the normal chat for your first prompt and open Sources again.</p><div class="promptbox">${esc(rt.text)}</div>
+      <fieldset><label class="q" for="retest_n">How many items does Sources list now?</label>${num("retest_n", x.retest_n)}
+      <div class="opts" style="margin-top:8px"><label><input type="checkbox" name="retest_unavailable" ${x.retest_unavailable?"checked":""}> I cannot find that chat any more</label></div></fieldset></div>` : ""}
+    <div class="card"><h2>Your views now</h2>${ATTITUDES.map(([k,t]) => q(esc(t), agree("post_"+k, x["post_"+k]))).join("")}</div>
+    <div class="card"><h2>About the Sources panel</h2>${likert.join("")}</div>
+    <div class="banner" role="note" style="margin-top:18px"><strong>Written answers are screened.</strong> Do not include an email address, phone number or link. An answer that contains one cannot be submitted. Please also leave out names, private details and the text of any memory.</div>
+    <fieldset><label class="q" for="surprised">What, if anything, surprised you? (Optional)<span class="hint">Describe it in general terms.</span></label>
+      <textarea id="surprised" maxlength="800">${esc(x.surprised||"")}</textarea></fieldset>
+    <fieldset><label class="q" for="confusing">Was anything in this study confusing? (Optional)<span class="hint">The same screening applies.</span></label>
+      <textarea id="confusing" maxlength="800">${esc(x.confusing||"")}</textarea></fieldset>
+    ${nav(true,"Finish")}</form>`;
+  wireCommon(document.getElementById("f"), f => {
+    if(PII.test(f.surprised.value) || PII.test(f.confusing.value)) return fail("A written answer contains an email address, phone number or link. Please remove it to continue.");
+    if(rt){
+      const gone = f.retest_unavailable.checked, v = intOrNull(f.retest_n.value);
+      if(!gone && (v===null || Number.isNaN(v))) return fail("Enter the recount as a whole number, or tick the box if you cannot find the chat.");
+      x.retest_prompt = rt.id; x.retest_n = gone ? null : v; x.retest_unavailable = gone;
+    }
+    const keys = ATTITUDES.map(a => "post_"+a[0]).concat(FINAL_LIKERT.map(a => a[0]), CONFIG.attentionCheck ? ["attention"] : []);
+    for(const k of keys) if(!val(f,k)) return fail("Please answer every rating question.");
+    for(const k of keys) x[k] = Number(val(f,k));
+    x.surprised = f.surprised.value.trim(); x.confusing = f.confusing.value.trim();
+    S.finished = new Date().toISOString();
+  });
+}
+
+function exportData(){
+  const { step, submitted, downloaded, started, finished, ...rest } = S;
+  const mins = finished ? Math.round((new Date(finished) - new Date(started)) / 60000) : null;
+  // Exact times could identify someone in a small group, so only the date and the total duration leave the browser.
+  return JSON.stringify({ ...rest, started: started.slice(0,10), finished: !!finished, duration_minutes: mins }, null, 2);
+}
+function done(){
+  const json = exportData(), name = `memory-sources-${S.participant_id}.json`, online = !!CONFIG.submitUrl, sent = S.submitted || S.downloaded;
+  const dlRow = `<div class="row"><button type="button" class="${online ? "" : "primary"}" id="dl">Download results file</button>${copyBtn("json")}</div>`;
+  let k = 1; const h = t => `<h2>${++k}. ${t}</h2>`;
+  app.innerHTML = header() + `<h1>${S.submitted ? "Thank you. Your answers were submitted." : "Almost done"}</h1>
+  <div class="card"><h2>1. Send your results</h2>
+    ${online ? `<p>Submitting is anonymous. Only the answers shown below are sent, with no name, account or email address.</p>
+      <div class="row"><button type="button" class="primary" id="send" ${S.submitted ? "disabled" : ""}>${S.submitted ? "Submitted" : "Submit anonymously"}</button><span id="sendmsg" class="muted" role="status"></span></div>
+      <div id="fallback" hidden><p class="error" style="font-weight:400">Submitting did not work. Please download the file instead. ${esc(CONFIG.returnInstructions)}</p>${dlRow}</div>`
+    : `<p>${esc(CONFIG.returnInstructions)}</p>${dlRow}`}
+    ${sent && CONFIG.completionCode ? `<p class="banner">Your completion code is <strong>${esc(CONFIG.completionCode)}</strong>.</p>` : ""}
+    <p class="muted">Your study code is <strong>${esc(S.participant_id)}</strong>. Keep it if you might want your answers removed later. ${esc(CONFIG.withdrawal)}</p>
+    <details><summary>See exactly what is sent</summary><pre class="promptbox" id="json">${esc(json)}</pre></details></div>
+  ${CONFIG.compensationInstructions ? `<div class="card">${h("Compensation")}<p>${esc(CONFIG.compensationInstructions)}</p></div>` : ""}
+  ${CONFIG.followUpUrl ? `<div class="card">${h("Optional follow-up call")}<p>We are inviting some participants to a short call about their experience. It is separate from this form and optional.
+    If you choose to share your study code there, your call can be linked to these answers. <a href="${esc(CONFIG.followUpUrl)}" target="_blank" rel="noopener">Sign up here</a>.</p></div>` : ""}
+  <div class="card">${h("Clean up your ChatGPT account")}<ol class="steps">
+    <li>Delete the chats you created for this study.</li>
+    <li>Open Settings, then Personalization, then Memory, and remove anything saved from those chats.</li>
+    <li>If you saw a memory you did not like, you can correct or delete it there too.</li></ol></div>
+  <div class="row between"><button type="button" id="back">Back</button><button type="button" id="reset">Clear my answers from this browser</button></div>`;
+  const dl = document.getElementById("dl");
+  if(dl) dl.onclick = () => { downloadText(json, name); if(!S.downloaded){ S.downloaded = true; save(); render(); } };
+  if(online){
+    const btn = document.getElementById("send"), msg = document.getElementById("sendmsg");
+    btn.onclick = async () => {
+      btn.disabled = true; msg.textContent = "Submitting...";
+      try{
+        // text/plain keeps this a simple request, which Google Apps Script web apps accept without sign-in.
+        const r = await fetch(CONFIG.submitUrl, { method:"POST", headers:{ "Content-Type":"text/plain;charset=utf-8" }, body:json, redirect:"follow" });
+        const j = await r.json(); if(!j.ok) throw new Error(j.error || "rejected");
+        S.submitted = true; save(); render();
+      }catch(e){
+        btn.disabled = false; msg.textContent = ""; document.getElementById("fallback").hidden = false;
+      }
+    };
+  }
+  document.getElementById("back").onclick = () => go(S.step-1);
+  document.getElementById("reset").onclick = () => { if(confirm(sent ? "Clear all answers from this browser?" : "Clear all answers from this browser? They have not been sent yet.")){ try{ localStorage.removeItem(KEY); }catch(e){} S = fresh(); save(); render(); } };
+  app.querySelectorAll("[data-copy]").forEach(btn => btn.onclick = async () => { try{ await navigator.clipboard.writeText(json); btn.textContent = "Copied"; }catch(e){ btn.textContent = "Open the details and copy"; } });
+}
+
+/* Researcher page (?validate=1): during a consented call, the researcher counts the sources on the participant's
+   shared screen for a few prompts. aggregate.py compares these counts with what the participant entered. Nothing else is recorded. */
+function validate(){
+  const row = () => `<div class="row vrow" style="margin-top:8px"><select name="id">${PROMPTS.map(p=>`<option value="${p.id}">${esc(p.text.slice(0,44))}</option>`).join("")}</select>
+    <label>Sources <input type="number" name="n_sources" min="0" max="99"></label><label>Memory <input type="number" name="n_memory" min="0" max="99"></label><label>Past chat <input type="number" name="n_pastchat" min="0" max="99"></label></div>`;
+  app.innerHTML = `<div class="banner"><strong>Researcher page.</strong> Not for participants.</div><h1>Validation counts</h1>
+    <p>Enter the participant's study code and your own count of the Sources panel for each prompt you observed. Do not record memory text.</p>
+    <form id="f"><label class="q" for="pid">Participant study code</label><input id="pid" style="font:inherit;padding:7px 8px" placeholder="P1a2b3c4d">
+    <div id="rows">${row()}${row()}</div><div class="row" style="margin-top:10px"><button type="button" id="add">Add a prompt</button></div>
+    <p id="err" class="error" role="alert" hidden></p><div class="row" style="margin-top:18px"><button type="submit" class="primary">Download validation file</button></div></form>`;
+  document.getElementById("add").onclick = () => document.getElementById("rows").insertAdjacentHTML("beforeend", row());
+  document.getElementById("f").onsubmit = e => {
+    e.preventDefault();
+    const pid = document.getElementById("pid").value.trim();
+    if(!/^P[0-9a-f]{8}$/.test(pid)) return fail("The study code looks like P followed by 8 letters or digits.");
+    const items = [...document.querySelectorAll(".vrow")].map(r => ({ id:r.querySelector("select").value,
+      n_sources:intOrNull(r.querySelector('[name="n_sources"]').value), n_memory:intOrNull(r.querySelector('[name="n_memory"]').value), n_pastchat:intOrNull(r.querySelector('[name="n_pastchat"]').value) }))
+      .filter(x => x.n_sources !== null);
+    if(!items.length || items.some(x => Number.isNaN(x.n_sources))) return fail("Enter a whole number of sources for at least one prompt.");
+    downloadText(JSON.stringify({ schema:SCHEMA, type:"validation", participant_id:pid, items }, null, 2), `validation-${pid}.json`);
+  };
+}
+
+if(params.get("validate") === "1"){ validate(); }
+else {
+  // A saved session that no longer matches the configured version is replaced if it has no answers yet.
+  // ?all=1 is the fixed-order pilot version (asks first if answers exist). ?reset=1 starts over once.
+  const wantAll = params.get("all") === "1";
+  const fits = wantAll ? S.mode === "all" : (S.mode === "all" || S.mode === (CONFIG.perParticipant ? "sample" : "all_random"));
+  const switchMode = !fits && (!S.prompts.some(p => p.done) || (wantAll && confirm("Switch to the fixed-order pilot version? This clears the answers saved in this browser.")));
+  if(params.get("reset") === "1" || switchMode){ try{ localStorage.removeItem(KEY); }catch(e){} S = fresh(); }
+  if(params.has("reset")){ params.delete("reset"); try{ history.replaceState(null, "", location.pathname + (params.toString() ? "?" + params : "")); }catch(e){} }
+  save(); render();
+}
+</script>
+</body>
+</html>
